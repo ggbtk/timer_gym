@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>운동 루틴 타이머</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 p-6">
+
+  <div class="max-w-xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold mb-4 text-center">🏋️ 운동 루틴 타이머</h1>
+
+    <!-- 운동 입력 폼 -->
+    <div class="grid grid-cols-3 gap-2 mb-4">
+      <input id="exerciseName" type="text" placeholder="운동명" class="border p-2 rounded" />
+      <input id="setCount" type="number" placeholder="세트 수" class="border p-2 rounded" />
+      <input id="restTime" type="number" placeholder="휴식 시간(초)" class="border p-2 rounded" />
+    </div>
+    <button id="addExerciseBtn" class="bg-blue-500 text-white px-4 py-2 rounded w-full mb-4">운동 추가</button>
+
+    <!-- 운동 리스트 -->
+    <ul id="routineList" class="text-sm text-gray-700 list-disc list-inside mb-4"></ul>
+
+    <!-- 루틴 시작 버튼 -->
+    <button onclick="startRoutine()" class="bg-green-500 text-white px-4 py-2 rounded w-full mb-6">루틴 시작</button>
+	<!-- 기존 루틴 리스트 아래에 운동 진행 현황 추가 -->
+	<h2 class="text-lg font-bold mb-2 mt-6">📋 운동 현황</h2>
+	<ul id="routineStatusList" class="text-sm list-disc list-inside text-gray-800 space-y-1 mb-4"></ul>
+
+    <!-- 루틴 상태 표시 -->
+    <div id="routineStatus" class="text-xl font-bold text-center mb-4"></div>
+    <div id="routineControl" class="text-center"></div>
+  </div>
+
+  <script>
+    const routine = [];
+    let currentExercise = 0;
+    let currentSet = 1;
+    let timer;
+
+    document.getElementById('addExerciseBtn').addEventListener('click', () => {
+      const name = document.getElementById('exerciseName').value.trim();
+      const sets = parseInt(document.getElementById('setCount').value);
+      const rest = parseInt(document.getElementById('restTime').value);
+
+      if (!name || isNaN(sets) || isNaN(rest)) {
+        alert("운동명, 세트 수, 휴식 시간을 모두 입력하세요.");
+        return;
+      }
+
+      routine.push({ name, sets, rest });
+      document.getElementById('exerciseName').value = '';
+      document.getElementById('setCount').value = '';
+      document.getElementById('restTime').value = '';
+      renderRoutine();
+    });
+
+	function renderRoutineStatus() {
+	  const list = document.getElementById('routineStatusList');
+	  list.innerHTML = "";
+
+	  routine.forEach((ex, i) => {
+		const li = document.createElement('li');
+
+		if (i < currentExercise) {
+		  li.textContent = `✔️ ${ex.name} 완료`;
+		} else if (i === currentExercise) {
+		  li.textContent = `▶️ ${ex.name} - ${currentSet}/${ex.sets}세트 진행 중`;
+		} else {
+		  li.textContent = `⏳ ${ex.name} 대기 중`;
+		}
+
+		list.appendChild(li);
+	  });
+	}
+    function renderRoutine() {
+      const list = document.getElementById('routineList');
+      list.innerHTML = "";
+      routine.forEach((ex, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${ex.name} - ${ex.sets}세트, 쉬는 시간 ${ex.rest}초`;
+        list.appendChild(li);
+      });
+    }
+
+    function startRoutine() {
+      if (routine.length === 0) {
+        alert("운동을 추가해주세요.");
+        return;
+      }
+      currentExercise = 0;
+      currentSet = 1;
+      document.getElementById('routineControl').innerHTML = "";
+      startExercise();
+    }
+
+    function startExercise() {
+      const ex = routine[currentExercise];
+      updateUI(`🏋️ ${ex.name} - ${currentSet}/${ex.sets}세트 시작`);
+	  renderRoutineStatus();
+      const nextBtn = document.createElement('button');
+      nextBtn.textContent = "✅ 이 세트 완료 (쉬기)";
+      nextBtn.className = "mt-4 bg-gray-700 text-white px-4 py-2 rounded";
+      nextBtn.onclick = () => startRest();
+      showControl(nextBtn);
+    }
+
+    function startRest() {
+      const ex = routine[currentExercise];
+      let rest = ex.rest;
+      updateUI(`😴 휴식 ${rest}초 남음`);
+	  renderRoutineStatus();
+      clearControls();
+	  
+
+      timer = setInterval(() => {
+        rest--;
+        updateUI(`😴 휴식 ${rest}초 남음`);
+
+        if (rest <= 0) {
+          clearInterval(timer);
+		  // 🔊 소리 재생
+		  const sound = document.getElementById("beepSound");
+		  sound.currentTime = 0;
+		  sound.play();
+		  
+          const sets = ex.sets;
+          if (currentSet < sets) {
+            currentSet++;
+            startExercise();
+          } else {
+            currentExercise++;
+            currentSet = 1;
+
+            if (currentExercise < routine.length) {
+              startExercise();
+            } else {
+              updateUI("🎉 루틴 완료!");
+            }
+          }
+        }
+      }, 1000);
+    }
+
+    function updateUI(text) {
+      document.getElementById('routineStatus').textContent = text;
+    }
+
+    function showControl(btn) {
+      const container = document.getElementById('routineControl');
+      container.innerHTML = "";
+      container.appendChild(btn);
+    }
+
+    function clearControls() {
+      document.getElementById('routineControl').innerHTML = "";
+    }
+  </script>
+
+	<audio id="beepSound" src="ding.mp3" preload="auto"></audio>
+</body>
+</html>
